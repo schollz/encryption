@@ -64,7 +64,7 @@ func EncryptByte(plaintext []byte, passphrase []byte) (encrypted []byte, salt []
 	return
 }
 
-// DecryptByte using pdbkdf2 decyprtion as specified by NIST to decrypt bytes based on 
+// DecryptByte using pdbkdf2 decyprtion as specified by NIST to decrypt bytes based on
 // a passphrase, a salt, and an IV.
 func DecryptByte(data []byte, passphrase []byte, salt []byte, iv []byte) (plaintext []byte, err error) {
 	key, _ := deriveKey(passphrase, salt)
