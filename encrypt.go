@@ -18,13 +18,15 @@ import (
 var Iter = 500
 
 // Encrypt byte using string passphrase into a string
-// that is IV.SALT.ENCRYPTED
+// `iv.salt.encrypted` which each piece (iv, salt, encrypted) is
+// base64 encoded. Can be decrypted using Decrypt.
 func Encrypt(plaintext []byte, passphrase string) string {
 	encrypted, salt, iv := EncryptByte(plaintext, []byte(passphrase))
 	return fmt.Sprintf("%s.%s.%s", base64.URLEncoding.EncodeToString(iv), base64.URLEncoding.EncodeToString(salt), base64.URLEncoding.EncodeToString(encrypted))
 }
 
-// Decrypt string of form IV.SALT.ENCRYPTED using string passphrase
+// Decrypt string of form `iv.salt.encrypted` to the byte of its original. Throws
+// error if the decryption fails.
 func Decrypt(encrypted string, passphrase string) (decrypted []byte, err error) {
 	s := strings.Split(encrypted, ".")
 	if len(s) != 3 {
@@ -48,9 +50,9 @@ func Decrypt(encrypted string, passphrase string) (decrypted []byte, err error) 
 	return
 }
 
-// EncryptByte using pdbkdf2 encryption as specified by NIST
-//  http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf
-// Section 8.2
+// EncryptByte using pdbkdf2 encryption as specified by NIST. See Section 8.2 of
+// http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf
+// for more information.
 func EncryptByte(plaintext []byte, passphrase []byte) (encrypted []byte, salt []byte, iv []byte) {
 	key, salt := deriveKey(passphrase, nil)
 	iv = make([]byte, 12)
@@ -62,7 +64,8 @@ func EncryptByte(plaintext []byte, passphrase []byte) (encrypted []byte, salt []
 	return
 }
 
-// Decrypt using pdbkdf2 decyprtion as specified by NIST
+// DecryptByte using pdbkdf2 decyprtion as specified by NIST to decrypt bytes based on 
+// a passphrase, a salt, and an IV.
 func DecryptByte(data []byte, passphrase []byte, salt []byte, iv []byte) (plaintext []byte, err error) {
 	key, _ := deriveKey(passphrase, salt)
 	b, _ := aes.NewCipher(key)
@@ -71,11 +74,11 @@ func DecryptByte(data []byte, passphrase []byte, salt []byte, iv []byte) (plaint
 	return
 }
 
+// deriveKey derives a pbkdf2 Key and salt as specified
+// by RFC2898 (http://www.ietf.org/rfc/rfc2898.txt).
 func deriveKey(passphrase []byte, salt []byte) ([]byte, []byte) {
 	if salt == nil {
 		salt = make([]byte, 8)
-		// http://www.ietf.org/rfc/rfc2898.txt
-		// Salt.
 		rand.Read(salt)
 	}
 	return pbkdf2.Key(passphrase, salt, Iter, 32, sha256.New), salt
